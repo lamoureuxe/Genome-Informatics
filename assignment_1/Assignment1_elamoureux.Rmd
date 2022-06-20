@@ -1,0 +1,1126 @@
+---
+title: "BMEG 591E: Assignment 1"
+output:
+html_document:
+toc: true
+toc_depth: 4
+toc_float: true
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Authors and contributions
+Following completion of your assignment, please fill out this section with the authors and their contributions to the 
+assignment. If you worked alone, only the author (e.g. your name and student ID) should be included.
+
+Authors: Erik Lamoureux
+
+Contributions: (example) N1 and N2 worked together on the same computer to complete the assignment. 
+N1 typed for the first half and N2 typed for the second half. 
+
+# Assignment Overview
+For this assignment we will be using data from a Chromatin Immunoprecipitation sequencing (ChIP-seq) produced by 
+Choi, Won-Young, et al., (2020). *https://pubmed.ncbi.nlm.nih.gov/33293480/*. This data is part of a series of 
+experiments that aimed to understand the chromatin changes that happen when an induced Pluripotent Stem Cell (iPSC) 
+undergo differentiation towards a Neuronal Progenitor Cell (NPC). The **fastqc** files from this experiment have been 
+pre-downloaded and added to the server, under the following path: **/projects/bmeg/A1/**. The datasets that we will be 
+using for the assignment are in a shared *reading only* location that you can read but ARE NOT allowed to alter. 
+
+This assignment has 3 main goals: 
+1. Get familiar with the server
+2. Manage a conda environment
+3. Perform an alignment against the human genome
+4. Cleaning your folder and uploading your assignment to Github
+
+IMPORTANT: Every time you see *#?#* means, that's a question you need to answer, with a command or with an 
+interpretation of the data. When an instruction follows #?# you need to type the command you used to complete 
+the task. Please make sure to check for them and answer them all, as this is how your assignment will be graded. 
+
+## 1. Getting Familiar with the Server
+For our course we will be using a server based on a Docker/Linux system. This will be the place where you are gonna 
+do the on-class practices and the assignments. There are a couple of things that you need to be aware while working 
+on the server. The server has limited storage and computer power. Therefore, you will be required to be mindful of 
+the processes you run as well as the files you keep. 
+
+To join the server you will need to be on an active connection of a UBC Virtual Private Network (VPN). If you do not 
+have one already, you can check how to install it here: 
+*https://it.ubc.ca/services/email-voice-internet/myvpn/setup-documents*. Once the VPN has been set, you will need 
+to open a terminal. 
+
+
+- **Windows system:** 
+a. Install a terminal emulator like Putty (*https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html*). 
+b. This will allow you to do a SSH connection using the server's IP (orca1.bcgsc.ca) and your credentials. 
+
+
+- **Linux/Unix system (Apple computer and Ubuntu):** 
+a. Open a terminal
+b. Type the following command: ssh username@orca1.bcgsc.ca 
+c. When prompted, type your password to complete the login 
+
+
+Now that you have successfully joined the server, let's get you used to some basic commands
+
+### a. Check a directory's path 
+When using terminal, paths work as the addresses of the files and directories you want to access and easily 
+move between them. Once you have logged into the server you will be in your *home directory*.
+
+```{bash, eval=FALSE}
+#?# Check your current directory's path: 0.5 pt
+
+elamoureux_bmeg22@orca01:~$ pwd
+/home/elamoureux_bmeg22
+```
+
+### b. Creating a directory 
+```{bash, eval=FALSE}
+
+#?# On your home directory create a new directory (folder) - 1pt
+## This folder will host the files created throughout this assignment 
+
+elamoureux_bmeg22@orca01:~$ mkdir assignments
+elamoureux_bmeg22@orca01:~$ dir
+assignments
+elamoureux_bmeg22@orca01:~$ cd assignments
+elamoureux_bmeg22@orca01:~/assignments$ mkdir assignment_1
+```
+
+*Note:* Generally speaking, is good to follow naming convention when using the terminal. Remember: 
+- Do not start a name with a number
+- Names are case sensitive (ASSIGNMENT1.txt and assignment1.txt are not the same)
+- Avoid to use spaces, as they are interpreted as special characters by the computer
+- Use _ or - to replace spaces
+- File extensions are meaningful for us to know the file format but in terminal you can use it as part of the file 
+name. Ex: you will be able to open a .sequences file that has tab delimited information
+
+### c. Moving within directories
+Access your newly created directory
+
+```{bash, eval=FALSE}
+#?# Type the command you need to use to move to your newly created directory - 0.5 pt 
+## Tip: look at the *cd* command documentation
+
+elamoureux_bmeg22@orca01:~/assignments$ dir
+assignment_1
+elamoureux_bmeg22@orca01:~/assignments$ cd assignment_1
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$  
+```
+
+How would you move back to your home directory (*/home/your_user_name*)?
+```{bash, eval=FALSE}
+#Check the tutorial: https://www.computerhope.com/unix/ucd.htm 
+#?# Using the complete directory path of your home directory: - 0.25 pt
+
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cd /home/elamoureux_bmeg22
+elamoureux_bmeg22@orca01:~$
+
+#?# Using the "go to parent directory" shortcut - 0.25
+
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cd ..
+elamoureux_bmeg22@orca01:~/assignments$ cd ..
+elamoureux_bmeg22@orca01:~$ pwd
+/home/elamoureux_bmeg22
+
+OR
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cd ../..
+elamoureux_bmeg22@orca01:~$ pwd
+/home/elamoureux_bmeg22
+
+OR
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cd ~
+elamoureux_bmeg22@orca01:~$ pwd
+/home/elamoureux_bmeg22
+```
+
+### d. Explore the dataset 
+The sequencing data that we will be using is paired-end. This means that each sequence has been sequenced twice, 
+one on each end (5' and 3'). Choose **one** of the reads files (1 or 2) for the following exercises.
+```{bash, eval=FALSE}
+
+cd /projects/bmeg/A1
+
+
+#?# Look at the first 3 rows of the dataset - 0.25
+
+# Tip: look at the *head* command documentation 
+
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ head -n 3 input_iPSC_SRA66_subset_1.fastq
+@SRR12694366.1.1000000
+CCACAGCCATGCCTCCAAGGGTCCTTGATCCAAATAGCAGAACAAATCACATAAACTCTCAGGGCCTACTTTAGAAAGGCATGTGACTTGAGTTTCTGTATCGACTGTTCCTCTTGTCCAGAGGCCTTAATTAATCCAGGAATGGCGGCAT
++
+
+#?# Look at the last 7 rows of the dataset - 0.25
+
+# Tip: look at the *tail* command documentation 
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ tail -n 7 input_iPSC_SRA66_subset_1.fastq
+TTATAGCATTATCATATATCTGTGCCAATAAGGGCTATAGATTTTTGTTTTAAATAAAAACAAGGGGCCAGGCATAGTAATTCATGCCTGTAATCCCTGTGTTTTGGGAGGCTGAGGCAAGAGAATCACTTGGCCAGGAGTTCAAGACCAG
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFF
+@SRR12694366.1.9999998
+CCGAAGATCCTTACCATCTGTGCAACCAAGTGGGTGGGACAGTGGAGGTGGGAGCCTCCACTATTTTGAACCTCAAGTTTCTTGGAAAATTTCTGTCAGACTTAGATGAGATCATTCATGTGAAGTTGATTTGTGAAAGGTCTAGAATGAG
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+
+#?# Explore the file with the *less* command - 0.25
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ less input_iPSC_SRA66_subset_1.fastq
+@SRR12694366.1.1000000
+CCACAGCCATGCCTCCAAGGGTCCTTGATCCAAATAGCAGAACAAATCACATAAACTCTCAGGGCCTACTTTAGAAAGGCATGTGACTTGAGTTTCTGTATCGACTGTTCCTCTTGTCCAGAGGCCTTAATTAATCCAGGAATGGCGGCAT
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
+@SRR12694366.1.10000029
+TTGGAAAGTCTTGCCAGTCTGACGACATTAGCCACAGTAGACTATTGTCAAGATGTGGGCAGACTATGTGTTTGCTAATCATGTCTCTTTACTCCGTCATAATTCCTCAGGGCACAAGATTAATAGATCGGAAGAGCACACGTCTGAACTC
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF::FFFFFF:FF,:FFFFFFFFFFFFFFFFF
+@SRR12694366.1.10000035
+GAGCCAGATTCTGCACAAGGGTTGGGTGCCACAGGCTGGCCCAGTGGCATGGCCTGGTAAGCTCCTTAGCCAGGACAGCCAGGCAGGTTGTCATCATCTGCTGTTCCTCCCTCAGCCCTCAGTGTGTATCTGCAGCAGGGACTTCTGTGCA
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+@SRR12694366.1.1000010
+TCACATAAAGAGAAAATGGTACATTGCATCTAGCAATTCACCCCTAATAAATGAGAATGAAAGTGTACTAAGTCAGACCTATAGAAGAAAAACATGGTTGCTGTGAACATTATGAATACAGTAGGTGCTCAATATGCTATTGCATTTTGAG
++
+FFFFFFFFFF:::FFFF:FFF,FFFFFFFFFFFFFFFFFFF,FFFFFFFFFF:FFFFF:FFFFF,FFFFFFFFFF:FFFFFFFFFF:FFFFFFFFFFF:F:FFFF:FFFFFF::FFFFFFFFFF,FFFFFF:FFFFFFF:FF:FFFFFFFF
+@SRR12694366.1.1000012
+CATACATACCATGGAATGCTACTTAGCAATCAAGAGGAATGAACTATTGACATTTGCCACTTAGACGGATCTCAGGGCATTTTGCTGAGTTTTTTAGGGAGATGCAAAAGAGAGTAATGGTTGTTAAGGGTTGGTTAGCAATGGTGGGTGG
++
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFF,FFFFFFFF:F:FF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+@SRR12694366.1.10000151
+CATGAAGGGAGTCTTTCATTCACCCCAGGAGGAGAGGCTGTCACCTGAGGAAGCCAGCATGGGGGAGAAAGGCACTTGCTACAAAGTGGGGTGCACAGAGGGTACCCCCCCATCTTCAGTCTCATAGGGAATTGGGCCCCTTGGCCAAAAG
+input_iPSC_SRA66_subset_1.fastq
+```
+
+
+
+### e. Piping 
+
+
+
+Because this is a very large dataset we will proceed to subset it in order to make it more manageable for the assignment. 
+Using the commands that you learned above:
+
+```{bash, eval=FALSE}
+#?# How many lines does the file was in total? - 0.25
+#Tip: loop at the *wc* command documentation
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ wc input_iPSC_SRA66_subset_1.fastq
+ 10459640  10459640 862266935 input_iPSC_SRA66_subset_1.fastq
+# wc - print newline, word, and byte counts for each file. Therefore, 10,459,640 lines. 
+
+#?# Select only the id lines (e.g. @SRR12506919.667552 667552 length=151) of the dataset (the ones that start with @ 
+and are followed by the read id) - 0.75 pt
+## Tip: look at the *grep* command
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ grep @SRR input_iPSC_SRA66_subset_1.fastq
+# This outputs all lines starting with @SRR in file input_iPSC_SRA66_subset_1. It lists the ID lines
+# from @SRR12694366.1.1000000 to @SRR12694366.1.9999998
+@SRR12694366.1.1000000
+...
+@SRR12694366.1.9999839
+@SRR12694366.1.9999861
+@SRR12694366.1.9999871
+@SRR12694366.1.9999876
+@SRR12694366.1.9999881
+@SRR12694366.1.9999883
+@SRR12694366.1.9999890
+@SRR12694366.1.9999903
+@SRR12694366.1.9999915
+@SRR12694366.1.9999923
+@SRR12694366.1.9999935
+@SRR12694366.1.9999949
+@SRR12694366.1.9999995
+@SRR12694366.1.9999998
+
+#?# How many reads are in the file (i.e., how many id lines are in the file)? - 1 pt
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ grep @SRR input_iPSC_SRA66_subset_1.fastq | wc
+2614910 2614910 62104475
+# 2,614,910 lines with IDs starting with @SRR (reads). 
+
+## Tip: Try using * | head * after the command line you use for the previous question
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ grep @SRR input_iPSC_SRA66_subset_1.fastq | head
+@SRR12694366.1.1000000
+@SRR12694366.1.10000029
+@SRR12694366.1.10000035
+@SRR12694366.1.1000010
+@SRR12694366.1.1000012
+@SRR12694366.1.10000151
+@SRR12694366.1.10000160
+@SRR12694366.1.1000017
+@SRR12694366.1.10000172
+@SRR12694366.1.10000189
+
+
+#?# Select only the reads id (e.g. @SRR12506919.667552) from the id lines - 1 pt
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cut -c 1- input_iPSC_SRA66_subset_1.fastq | grep @SRR input_iPSC_SRA66_subset_1.fastq | wc
+2614910 2614910 62104475
+
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cut -f 1 input_iPSC_SRA66_subset_1.fastq | grep @SRR input_iPSC_SRA66_subset_1.fastq | wc
+2614910 2614910 62104475
+
+## Tip: Look into the *cut* command. Carefully read the default delimiter, is it the case for our file?
+# The default delimiter of cut is tab. Other delimiters can be specified using the -d option. 
+# Yes, the default delimiter is appropriate for our use. 
+```
+
+### f. Saving an output 
+```{bash, eval=FALSE}
+#?# Save a file that contains only the reads ids (the result of our previous exercise). - 0.5 pt
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cut -f 1 input_iPSC_SRA66_subset_1.fastq | grep @SRR input_iPSC_SRA66_subset_1.fastq > /home/elamoureux_bmeg22/assignments/assignment_1/read_ids.txt
+
+
+
+#?# Now, list all the files in a directory: 
+elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cd
+elamoureux_bmeg22@orca01:~$ dir
+assignment1  assignments
+elamoureux_bmeg22@orca01:~$ cd assignments/assignment_1
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ ls
+read_ids.txt
+
+
+
+
+#?# What do you see? Was the subset file created correctly? - 0.25 pt
+
+## ----
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ wc read_ids.txt
+ 2614910  2614910 62104475 read_ids.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ more read_ids.txt
+@SRR12694366.1.1000000
+@SRR12694366.1.10000029
+@SRR12694366.1.10000035
+@SRR12694366.1.1000010
+@SRR12694366.1.1000012
+@SRR12694366.1.10000151
+@SRR12694366.1.10000160
+@SRR12694366.1.1000017
+@SRR12694366.1.10000172
+@SRR12694366.1.10000189
+@SRR12694366.1.1000019
+@SRR12694366.1.10000198
+@SRR12694366.1.10000222
+@SRR12694366.1.10000245
+@SRR12694366.1.10000253
+@SRR12694366.1.10000257
+@SRR12694366.1.10000263
+@SRR12694366.1.10000270
+@SRR12694366.1.10000295
+@SRR12694366.1.10000374
+@SRR12694366.1.10000383
+@SRR12694366.1.10000387
+@SRR12694366.1.10000403
+@SRR12694366.1.10000434
+@SRR12694366.1.10000439
+@SRR12694366.1.10000468
+@SRR12694366.1.10000480
+@SRR12694366.1.10000512
+@SRR12694366.1.10000521
+@SRR12694366.1.10000523
+@SRR12694366.1.1000053
+@SRR12694366.1.10000565
+@SRR12694366.1.10000566
+@SRR12694366.1.10000605
+@SRR12694366.1.10000712
+@SRR12694366.1.10000713
+@SRR12694366.1.1000073
+@SRR12694366.1.10000739
+@SRR12694366.1.10000773
+@SRR12694366.1.10000807
+@SRR12694366.1.10000832
+@SRR12694366.1.10000848
+@SRR12694366.1.10000861
+@SRR12694366.1.10000867
+@SRR12694366.1.10000874
+@SRR12694366.1.10000877
+@SRR12694366.1.10000899
+@SRR12694366.1.10000900
+
+# File was created correctly.
+```
+
+### g. Creating a backup 
+
+
+
+There will be times where you will want to save a copy of a dataset or file before modifying in case something goes wrong. 
+For those cases, you can create a copy of any file or directory using the "copy" command
+
+
+
+```{bash, eval=FALSE}
+
+
+
+#?# Create a copy of the reads ids file - 0.25 pt
+
+## Tip: man cp 
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cp read_ids.txt read_ids_copy.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ ls
+read_ids.txt  read_ids_copy.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ wc read_ids_copy.txt
+ 2614910  2614910 62104475 read_ids_copy.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ head read_ids_copy.txt
+@SRR12694366.1.1000000
+@SRR12694366.1.10000029
+@SRR12694366.1.10000035
+@SRR12694366.1.1000010
+@SRR12694366.1.1000012
+@SRR12694366.1.10000151
+@SRR12694366.1.10000160
+@SRR12694366.1.1000017
+@SRR12694366.1.10000172
+@SRR12694366.1.10000189
+
+
+
+#?# Change the name of the backup reads id file - 0.25 pt
+
+## Tip: man mv
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ mv read_ids_copy.txt read_ids_cp.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ ls
+read_ids.txt  read_ids_cp.txt
+
+
+#?# Delete the copy of the reads id file - 0.25 pt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ rm read_ids_cp.txt
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ ls
+read_ids.txt
+```
+
+
+________________
+## 2. Managing Conda Environments
+
+### a. Installing conda 
+
+Conda is a package and environment manager (*https://docs.conda.io/en/latest/*). It helps to create different 
+virtual environments where you can have several packages installed to meet different needs. 
+
+```{bash, eval=FALSE}
+
+
+________
+
+## 1. Move to your home directory 
+elamoureux_bmeg22@orca01:~/assignments/assignment_1$ cd
+
+
+________
+
+#?# 2. Use the wget command to get the following file: https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh
+elamoureux_bmeg22@orca01:~$ wget https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh
+--2022-01-25 03:38:49--  https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh
+Resolving repo.anaconda.com... 104.16.130.3, 104.16.131.3, 2606:4700::6810:8203, ...
+Connecting to repo.anaconda.com|104.16.130.3|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 608680744 (580M) [application/x-sh]
+Saving to: 'Anaconda3-2021.11-Linux-x86_64.sh'
+
+Anaconda3-2021.11-Linux-x 100%[==================================>] 580.48M  77.4MB/s    in 7.0s
+
+2022-01-25 03:38:58 (82.9 MB/s) - 'Anaconda3-2021.11-Linux-x86_64.sh' saved [608680744/608680744]
+
+elamoureux_bmeg22@orca01:~$ ls
+Anaconda3-2021.11-Linux-x86_64.sh  assignment1	assignments
+
+## The file extension .sh pertains to a bash script, the script you just downloaded contains all the instructions needed 
+to install Conda to your home directory
+
+________
+
+#?# 3. Run the Anaconda3-2021.11-Linux-x86_64.sh bash script. IMPORTANT: say yes to all the steps when prompted! 
+elamoureux_bmeg22@orca01:~$ ls
+Anaconda3-2021.11-Linux-x86_64.sh  assignment1	assignments
+
+elamoureux_bmeg22@orca01:~$ bash Anaconda3-2021.11-Linux-x86_64.sh
+
+Welcome to Anaconda3 2021.11
+
+In order to continue the installation process, please review the license
+agreement.
+Please, press ENTER to continue
+>>>
+===================================
+End User License Agreement - Anaconda Individual Edition
+===================================
+
+Copyright 2015-2021, Anaconda, Inc.
+...
+
+
+
+                                                                                                   done
+installation finished.
+Do you wish the installer to initialize Anaconda3
+by running conda init? [yes|no]
+[no] >>> yes
+no change     /home/elamoureux_bmeg22/anaconda3/condabin/conda
+no change     /home/elamoureux_bmeg22/anaconda3/bin/conda
+no change     /home/elamoureux_bmeg22/anaconda3/bin/conda-env
+no change     /home/elamoureux_bmeg22/anaconda3/bin/activate
+no change     /home/elamoureux_bmeg22/anaconda3/bin/deactivate
+no change     /home/elamoureux_bmeg22/anaconda3/etc/profile.d/conda.sh
+no change     /home/elamoureux_bmeg22/anaconda3/etc/fish/conf.d/conda.fish
+no change     /home/elamoureux_bmeg22/anaconda3/shell/condabin/Conda.psm1
+no change     /home/elamoureux_bmeg22/anaconda3/shell/condabin/conda-hook.ps1
+no change     /home/elamoureux_bmeg22/anaconda3/lib/python3.9/site-packages/xontrib/conda.xsh
+no change     /home/elamoureux_bmeg22/anaconda3/etc/profile.d/conda.csh
+modified      /home/elamoureux_bmeg22/.bashrc
+
+==> For changes to take effect, close and re-open your current shell. <==
+
+If you'd prefer that conda's base environment not be activated on startup,
+   set the auto_activate_base parameter to false:
+
+conda config --set auto_activate_base false
+
+Thank you for installing Anaconda3!
+
+===========================================================================
+
+Working with Python and Jupyter notebooks is a breeze with PyCharm Pro,
+designed to be used with Anaconda. Download now and have the best data
+tools at your fingertips.
+
+PyCharm Pro for Anaconda is available at: https://www.anaconda.com/pycharm
+
+________
+
+## 4. To finalize the installation you need to log out your current session and log in back to the server
+elamoureux_bmeg22@orca01:~$ logout
+```
+
+### b. Create a conda environment
+In order to run the reads alignments against the human genome, there are a few tools that we will need:
+
+- fastQC (*https://www.bioinformatics.babraham.ac.uk/projects/fastqc/*): comprehensive quality control measures of 
+sequencing data.
+
+- bowtie2 (*http://bowtie-bio.sourceforge.net/bowtie2/index.shtml*): alignments of sequencing data. 
+
+- samtools (*http://www.htslib.org/doc/samtools.html*): set of tools to manage sam/bam alignment files 
+
+- htop & screen: bash system tools to visualize the server capacity and to run commands in the background, respectively. 
+
+To install them, we will be making use of the conda environments. Conda allows you to create and manage environments 
+for any programming language. Managing this environments mean that you can work with specific versions of different 
+programs at any given moment, simply by loading the desired environment. You can find more information about this 
+resource here: *https://docs.conda.io/en/latest/* . 
+
+```{bash, eval=FALSE}
+
+#?# Create a new conda environment: - 0.5 pt
+# Tip: Consult the previously provide links or consult the conda create help (conda create --help)
+(base) elamoureux_bmeg22@orca01:~$ conda create --name bmeg591e
+Collecting package metadata (current_repodata.json): done
+Solving environment: done
+
+
+==> WARNING: A newer version of conda exists. <==
+  current version: 4.10.3
+  latest version: 4.11.0
+
+Please update conda by running
+
+    $ conda update -n base -c defaults conda
+
+
+
+## Package Plan ##
+
+  environment location: /home/elamoureux_bmeg22/anaconda3/envs/bmeg591e
+
+
+
+Proceed ([y]/n)? y
+
+Preparing transaction: done
+Verifying transaction: done
+Executing transaction: done
+#
+# To activate this environment, use
+#
+#     $ conda activate bmeg591e
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate
+
+(base) elamoureux_bmeg22@orca01:~$ conda activate bmeg591e
+(bmeg591e) elamoureux_bmeg22@orca01:~$
+
+```
+
+### b. Add programs to your conda environment
+Now that the environment has been created, its time to add the packages that we will need. Conda has an active 
+community and a great documentation 
+(*https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html*) which you can use 
+throughout the course to help answer any questions you may have. 
+
+```{bash, eval=FALSE}
+#?# Add fastQC bowtie2 to your conda environment: - 1 pt
+(bmeg591e) elamoureux_bmeg22@orca01:~$ conda install -c bioconda fastqc
+(bmeg591e) elamoureux_bmeg22@orca01:~$ conda install -c bioconda bowtie2
+
+## Run the following command to install samtools onto your conda environment:
+(bmeg591e) elamoureux_bmeg22@orca01:~$ conda install -c bioconda samtools
+
+#?# Add screen to your conda environment: - 1pt 
+(bmeg591e) elamoureux_bmeg22@orca01:~$ conda install -c conda-forge screen 
+
+#?# Add htop to your conda environment: - 1pt
+(bmeg591e) elamoureux_bmeg22@orca01:~$ conda install -c conda-forge htop 
+```
+________
+
+## 3. Performing Alignments 
+### a. Data quality check
+We will use the widely used fastQC software to do a quick inspection of the data quality. Once it has ran, 
+it will give you an html report of the quality of the data, that you can open using a web browser. More 
+information on how to read the output can be found here: *https://dnacore.missouri.edu/PDF/FastQC_Manual.pdf* 
+and in the tool's website.
+
+```{bash, eval=FALSE}
+#?# Run fastQC on the fastq files: - 1pt
+(bmeg591e) elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cp input_iPSC_SRA66_subset_1.fastq /home/elamoureux_bmeg22/assignments/assignment_1/input_iPSC_SRA66_subset_1_copy.fastq
+(bmeg591e) elamoureux_bmeg22@orca01:/projects/bmeg/A1$ cp input_iPSC_SRA66_subset_2.fastq /home/elamoureux_bmeg22/assignments/assignment_1/input_iPSC_SRA66_subset_2_copy.fastq
+
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ fastqc input_iPSC_SRA66_subset_1_copy.fastq
+Started analysis of input_iPSC_SRA66_subset_1_copy.fastq
+Approx 5% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 10% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 15% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 20% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 25% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 30% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 35% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 40% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 45% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 50% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 55% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 60% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 65% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 70% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 75% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 80% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 85% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 90% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Approx 95% complete for input_iPSC_SRA66_subset_1_copy.fastq
+Analysis complete for input_iPSC_SRA66_subset_1_copy.fastq
+
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ fastqc input_iPSC_SRA66_subset_2_copy.fastq
+Started analysis of input_iPSC_SRA66_subset_2_copy.fastq
+Approx 5% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 10% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 15% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 20% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 25% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 30% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 35% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 40% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 45% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 50% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 55% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 60% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 65% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 70% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 75% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 80% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 85% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 90% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Approx 95% complete for input_iPSC_SRA66_subset_2_copy.fastq
+Analysis complete for input_iPSC_SRA66_subset_2_copy.fastq
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ ls
+input_iPSC_SRA66_subset_1_copy.fastq        input_iPSC_SRA66_subset_2_copy.fastq        read_ids.txt
+input_iPSC_SRA66_subset_1_copy_fastqc.html  input_iPSC_SRA66_subset_2_copy_fastqc.html
+input_iPSC_SRA66_subset_1_copy_fastqc.zip   input_iPSC_SRA66_subset_2_copy_fastqc.zip
+
+
+## In order to open the html files on your web browser you will need to download the files to your computer
+
+## Ubuntu/Linux and Mac users: look at the *scp* command
+
+## Windows users: follow the following instructions: 
+https://stackoverflow.com/questions/6217055/how-can-i-copy-a-file-from-a-remote-server-to-using-putty-in-windows
+
+In Windows Command Prompt:
+C:\Users\eriks>set PATH=C:\Users\eriks\bmeg_591e\pscp.exe
+
+C:\Users\eriks\bmeg_591e>pscp
+PuTTY Secure Copy client
+Release 0.76
+Usage: pscp [options] [user@]host:source target
+       pscp [options] source [source...] [user@]host:target
+       pscp [options] -ls [user@]host:filespec
+Options:
+  -V        print version information and exit
+  -pgpfp    print PGP key fingerprints and exit
+  -p        preserve file attributes
+  -q        quiet, don't show statistics
+  -r        copy directories recursively
+  -v        show verbose messages
+  -load sessname  Load settings from saved session
+  -P port   connect to specified port
+  -l user   connect with specified username
+  -pw passw login with specified password
+  -1 -2     force use of particular SSH protocol version
+  -ssh -ssh-connection
+            force use of particular SSH protocol variant
+  -4 -6     force use of IPv4 or IPv6
+  -C        enable compression
+  -i key    private key file for user authentication
+  -noagent  disable use of Pageant
+  -agent    enable use of Pageant
+  -no-trivial-auth
+            disconnect if SSH authentication succeeds trivially
+  -hostkey keyid
+            manually specify a host key (may be repeated)
+  -batch    disable all interactive prompts
+  -no-sanitise-stderr  don't strip control chars from standard error
+  -proxycmd command
+            use 'command' as local proxy
+  -unsafe   allow server-side wildcards (DANGEROUS)
+  -sftp     force use of SFTP protocol
+  -scp      force use of SCP protocol
+  -sshlog file
+  -sshrawlog file
+            log protocol details to a file
+  -logoverwrite
+  -logappend
+            control what happens when a log file already exists
+
+C:\Users\eriks\bmeg_591e> pscp elamoureux_bmeg22@orca1.bcgsc.ca:assignments/assignment_1/input_iPSC_SRA66_subset_1_copy_fastqc.html c:\users\eriks\bmeg_591e\input_iPSC_SRA66_subset_1_copy_fastqc.html
+elamoureux_bmeg22@orca1.bcgsc.ca's password:
+input_iPSC_SRA66_subset_1 | 528 kB | 528.7 kB/s | ETA: 00:00:00 | 100%
+
+C:\Users\eriks\bmeg_591e> pscp elamoureux_bmeg22@orca1.bcgsc.ca:assignments/assignment_1/input_iPSC_SRA66_subset_2_copy_fastqc.html c:\users\eriks\bmeg_591e\input_iPSC_SRA66_subset_2_copy_fastqc.html
+elamoureux_bmeg22@orca1.bcgsc.ca's password:
+input_iPSC_SRA66_subset_2 | 528 kB | 528.8 kB/s | ETA: 00:00:00 | 100%
+
+#?# What can you say about the data quality? - 2 pt 
+
+# ---
+For both files, the data quality seems high. The basic statistics were complete, per base sequence quality was high, 
+quality per read was high, per base sequence content was good, per base N content was zero, sequence length distribution
+was good, percent of sequences remaining if deduplicated was 85.1%-85.4%T, there were no overrepresented sequences, and
+adapter content was good. Only per sequence GC content was flagged for both files. The GC count per read distribution
+did not greatly match the theoretical distribution, but the fit is not bad. 
+```
+
+
+
+
+
+### b. Running a process on the background: screen 
+
+
+
+The processes that we are about to run, can take a long time to finish. Thus, we will make use of the *screen* tool, 
+which allows you to run a process in the background while continue using your server session without the risk of 
+ending the process due to a bad internet connection, accidentally closing the tab or other random circumstances. 
+
+
+
+```{bash, eval=FALSE}
+
+
+
+## To run a process in a background screen with screen you:
+
+
+
+# 1. Run the following command: 
+
+script /dev/null
+
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ script /dev/null
+Script started, file is /dev/null
+
+
+# 2. Activate your conda environment 
+(base) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ conda activate bmeg591e
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$
+
+
+# 3. Start a background process with a specific name 
+
+screen -S background_screen_name 
+
+
+
+# 4. Run the process and any commands you wish
+
+wc -l usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+
+
+# 5. Get out of the background screen, you will need to type the following:
+
+ctrl + A + D 
+
+
+
+# 6. Return to the background screen to check the process
+
+screen -r background_screen_name
+
+
+
+# 7. Terminate the background screen once the process has ended
+
+# Within the background screen type:
+
+exit 
+
+
+
+```
+
+
+
+
+
+### c. Checking the server capacity and your current runs: htop
+
+
+
+Another way to check on the progress of your runs and the server status is with the *htop* command. This will open a 
+screen showing all the processes that are being currently being run in the server. Our server only has 2 cpu's/cores, 
+the green bar next to each code, represents how much of that node it is currently in use. Always make sure to 
+check the processes that are being run before sending yours.
+
+
+
+```{bash, eval=FALSE}
+
+
+#?# Use the htop command to describe the status of the server - 1.5 pt
+
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ htop
+
+    0]    3]    6]    9]   12]  15]  18]       20]   23]   26]   29]   32]   35]  38]
+    1]    4]    7]   10]   13]  16]  19]       21]   24]   27]   30]   33]   36]  39]
+    2]    5]    8]   11]   14]  17]            22]   25]   28]   31]   34]   37]
+  Mem[||||||||||||||||||||||||||||69.6G/126G] Tasks: 18, 0 thr, 0 kthr; 6 running
+  Swp[                                 0K/0K] Load average: 2.86 2.72 2.67
+                                              Uptime: 146 days(!), 09:52:01
+
+   PID USER       PRI  NI  VIRT   RES   SHR S CPU%-MEM%   TIME+  Command
+     1 elamoureux  20   0 18220   376     0 S  0.0  0.0  0:00.03 /bin/bash
+     9 elamoureux  20   0 18224   496    28 S  0.0  0.0  0:00.01 /bin/bash -l
+    17 elamoureux  20   0 18224   500    28 S  0.0  0.0  0:00.01 /bin/bash -l
+    32 elamoureux  20   0 18228  1972  1500 S  0.0  0.0  0:00.01 /bin/bash -l
+    41 elamoureux  20   0 18228  1984  1508 S  0.0  0.0  0:00.05 /bin/bash -l
+ 10817 elamoureux  20   0 18300  2084  1536 S  0.0  0.0  0:00.02 /bin/bash -l
+ 10863 elamoureux  20   0 19132   904   732 S  0.0  0.0  0:00.03 script /dev/null
+ 10864 elamoureux  20   0 18304  2040  1500 S  0.0  0.0  0:00.00 bash -i
+ 10883 elamoureux  20   0 15836  1028   828 S  0.0  0.0  0:00.01 screen
+ 10884 elamoureux  20   0 15968  1204   796 S  0.0  0.0  0:00.04 SCREEN
+ 10885 elamoureux  20   0 18336  2088  1504 S  0.0  0.0  0:00.02 /bin/bash
+ 10905 elamoureux  20   0 15836  1028   828 S  0.0  0.0  0:00.01 screen -S screen_2
+ 10906 elamoureux  20   0 15968  1200   796 S  0.0  0.0  0:00.03 SCREEN -S screen_2
+ 10907 elamoureux  20   0 18548  2312  1548 S  0.0  0.0  0:00.30 /bin/bash
+ 10932 elamoureux  20   0 15836  1028   828 S  0.0  0.0  0:00.01 screen -S screen_3
+ 10933 elamoureux  20   0 15836  1188   804 S  0.0  0.0  0:00.02 SCREEN -S screen_3
+ 10934 elamoureux  20   0 18336  2092  1512 S  0.0  0.0  0:00.02 /bin/bash
+ 10957 elamoureux  20   0 23604  2212  1528 R  0.0  0.0  0:00.03 htop
+```
+
+### d. Genome indexing - bowtie2
+
+
+
+Now, we will need to create an index of the human genome that bowtie2 will use to map our sequences in the genome. 
+In order to do this, you will need to use the previously downloaded files of the human genome with the desired build 
+(e.g. hg19,hg38), you can find those files within the server here: */usr/local/share/human/*
+
+**BEFORE RUNNING ANYTHING**: go to the "Other resources" section at the end of the assignment!
+
+```{bash, eval=FALSE}
+
+
+
+## Something useful to do when using a new software is to look at the documentation using the *help* option
+
+## Try running: 
+
+bowtie2 -h 
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ bowtie2 -h
+
+  --score-min <func> min acceptable alignment score w/r/t read length
+                     (G,20,8 for local, L,-0.6,-0.6 for end-to-end)
+
+ Reporting:
+  (default)          look for multiple alignments, report best, with MAPQ
+   OR
+  -k <int>           report up to <int> alns per read; MAPQ not meaningful
+   OR
+  -a/--all           report all alignments; very slow, MAPQ not meaningful
+
+ Effort:
+  -D <int>           give up extending after <int> failed extends in a row (15)
+  -R <int>           for reads w/ repetitive seeds, try <int> sets of seeds (2)
+
+ Paired-end:
+  -I/--minins <int>  minimum fragment length (0)
+  -X/--maxins <int>  maximum fragment length (500)
+  --fr/--rf/--ff     -1, -2 mates align fw/rev, rev/fw, fw/fw (--fr)
+  --no-mixed         suppress unpaired alignments for paired reads
+  --no-discordant    suppress discordant alignments for paired reads
+  --dovetail         concordant when mates extend past each other
+  --no-contain       not concordant when one mate alignment contains other
+  --no-overlap       not concordant when mates overlap at all
+
+ BAM:
+  --align-paired-reads Bowtie2 will, by default, attempt to align unpaired BAM reads.
+                     Use this option to align paired-end reads instead.
+  --preserve-tags    Preserve tags from the original BAM record by
+                     appending them to the end of the corresponding SAM output.
+
+ Output:
+  -t/--time          print wall-clock time taken by search phases
+  --un <path>        write unpaired reads that didn't align to <path>
+  --al <path>        write unpaired reads that aligned at least once to <path>
+  --un-conc <path>   write pairs that didn't align concordantly to <path>
+  --al-conc <path>   write pairs that aligned concordantly at least once to <path>
+    (Note: for --un, --al, --un-conc, or --al-conc, add '-gz' to the option name, e.g.
+    --un-gz <path>, to gzip compress output, or add '-bz2' to bzip2 compress output.)
+  --quiet            print nothing to stderr except serious errors
+  --met-file <path>  send metrics to file at <path> (off)
+  --met-stderr       send metrics to stderr (off)
+  --met <int>        report internal counters & metrics every <int> secs (1)
+  --no-unal          suppress SAM records for unaligned reads
+  --no-head          suppress header lines, i.e. lines starting with @
+  --no-sq            suppress @SQ header lines
+  --rg-id <text>     set read group id, reflected in @RG line and RG:Z: opt field
+  --rg <text>        add <text> ("lab:value") to @RG line of SAM header.
+                     Note: @RG line only printed when --rg-id is set.
+  --omit-sec-seq     put '*' in SEQ and QUAL fields for secondary alignments.
+  --sam-no-qname-trunc Suppress standard behavior of truncating readname at first whitespace
+                      at the expense of generating non-standard SAM.
+  --xeq              Use '='/'X', instead of 'M,' to specify matches/mismatches in SAM record.
+  --soft-clipped-unmapped-tlen Exclude soft-clipped bases when reporting TLEN
+
+ Performance:
+  -p/--threads <int> number of alignment threads to launch (1)
+  --reorder          force SAM output order to match order of input reads
+  --mm               use memory-mapped I/O for index; many 'bowtie's can share
+
+ Other:
+  --qc-filter        filter out reads that are bad according to QSEQ filter
+  --seed <int>       seed for random number generator (0)
+  --non-deterministic seed rand. gen. arbitrarily instead of using read attributes
+  --version          print version information and quit
+  -h/--help          print this usage message
+
+
+## IMPORTANT!!!!
+
+## BEFORE RUNNING: go to the "Other resources" section at the end of the assignment!!
+
+## __________________________________________________________________________________
+
+#?# Use the hg38 build to create an index of the human genome with bowtie2
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ bowtie2-build /projects/bmeg/indexes/hg38/hg38.fa /projects/bmeg/indexes/hg38/hg38_bowtie2_index
+
+
+## Tip: look into the bowtie2-build help (bowtie2-build --help) - 1.5 pt
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ bowtie2-build --help
+
+
+  -t/--time          print wall-clock time taken by search phases
+  --un <path>        write unpaired reads that didn't align to <path>
+  --al <path>        write unpaired reads that aligned at least once to <path>
+  --un-conc <path>   write pairs that didn't align concordantly to <path>
+  --al-conc <path>   write pairs that aligned concordantly at least once to <path>
+    (Note: for --un, --al, --un-conc, or --al-conc, add '-gz' to the option name, e.g.
+    --un-gz <path>, to gzip compress output, or add '-bz2' to bzip2 compress output.)
+  --quiet            print nothing to stderr except serious errors
+  --met-file <path>  send metrics to file at <path> (off)
+  --met-stderr       send metrics to stderr (off)
+  --met <int>        report internal counters & metrics every <int> secs (1)
+  --no-unal          suppress SAM records for unaligned reads
+  --no-head          suppress header lines, i.e. lines starting with @
+  --no-sq            suppress @SQ header lines
+  --rg-id <text>     set read group id, reflected in @RG line and RG:Z: opt field
+  --rg <text>        add <text> ("lab:value") to @RG line of SAM header.
+                     Note: @RG line only printed when --rg-id is set.
+  --omit-sec-seq     put '*' in SEQ and QUAL fields for secondary alignments.
+  --sam-no-qname-trunc Suppress standard behavior of truncating readname at first whitespace
+                      at the expense of generating non-standard SAM.
+  --xeq              Use '='/'X', instead of 'M,' to specify matches/mismatches in SAM record.
+  --soft-clipped-unmapped-tlen Exclude soft-clipped bases when reporting TLEN
+
+ Performance:
+  -p/--threads <int> number of alignment threads to launch (1)
+  --reorder          force SAM output order to match order of input reads
+  --mm               use memory-mapped I/O for index; many 'bowtie's can share
+
+ Other:
+  --qc-filter        filter out reads that are bad according to QSEQ filter
+  --seed <int>       seed for random number generator (0)
+  --non-deterministic seed rand. gen. arbitrarily instead of using read attributes
+  --version          print version information and quit
+  -h/--help          print this usage message
+(bmeg591e) elamoureux_bmeg22@orca01:~$ bowtie2-build --help
+Bowtie 2 version 2.3.5.1 by Ben Langmead (langmea@cs.jhu.edu, www.cs.jhu.edu/~langmea)
+Usage: bowtie2-build [options]* <reference_in> <bt2_index_base>
+    reference_in            comma-separated list of files with ref sequences
+    bt2_index_base          write bt2 data to files with this dir/basename
+*** Bowtie 2 indexes work only with v2 (not v1).  Likewise for v1 indexes. ***
+Options:
+    -f                      reference files are Fasta (default)
+    -c                      reference sequences given on cmd line (as
+                            <reference_in>)
+    --large-index           force generated index to be 'large', even if ref
+                            has fewer than 4 billion nucleotides
+    --debug                 use the debug binary; slower, assertions enabled
+    --sanitized             use sanitized binary; slower, uses ASan and/or UBSan
+    --verbose               log the issued command
+    -a/--noauto             disable automatic -p/--bmax/--dcv memory-fitting
+    -p/--packed             use packed strings internally; slower, less memory
+    --bmax <int>            max bucket sz for blockwise suffix-array builder
+    --bmaxdivn <int>        max bucket sz as divisor of ref len (default: 4)
+    --dcv <int>             diff-cover period for blockwise (default: 1024)
+    --nodc                  disable diff-cover (algorithm becomes quadratic)
+    -r/--noref              don't build .3/.4 index files
+    -3/--justref            just build .3/.4 index files
+    -o/--offrate <int>      SA is sampled every 2^<int> BWT chars (default: 5)
+    -t/--ftabchars <int>    # of chars consumed in initial lookup (default: 10)
+    --threads <int>         # of threads
+    --seed <int>            seed for random number generator
+    -q/--quiet              verbose output (for debugging)
+    -h/--help               print detailed description of tool and its options
+    --usage                 print this usage message
+    --version               print version information and quit
+```
+
+
+
+### e. Alignment
+We are working with paired-end data. Thus, you will need to make sure to use both fastq files to align the sequences to 
+the genome.
+
+**IMPORTANT:** Run with *default parameters* DO NOT specify any non-essential paramaters.
+
+**Time flag**: This step will take up to 30 mins 
+
+```{bash, eval=FALSE}
+#?# Perform a paired-end alignment of the fastq sequences provided (located here: /projects/bmeg/A1/) to the human genome 
+index build (located here: /projects/bmeg/indexes/hg38/ ) - 2pt
+
+## Tip: look at the bowtie2 --help or the documentation on the tool website 
+(http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#getting-started-with-bowtie-2-lambda-phage-example)
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ bowtie2 -x /projects/bmeg/indexes/hg38/hg38_bowtie2_index -1 /projects/bmeg/A1/input_iPSC_SRA66_subset_1.fastq -2 /projects/bmeg/A1/input_iPSC_SRA66_subset_2.fastq -S output.sam
+For input_iPSC_SRA66_subset_1.fastq: 
+2614910 reads; of these:
+  2614910 (100.00%) were paired; of these:
+    220030 (8.41%) aligned concordantly 0 times
+    2129747 (81.45%) aligned concordantly exactly 1 time
+    265133 (10.14%) aligned concordantly >1 times
+    ----
+    220030 pairs aligned concordantly 0 times; of these:
+      169387 (76.98%) aligned discordantly 1 time
+    ----
+    50643 pairs aligned 0 times concordantly or discordantly; of these:
+      101286 mates make up the pairs; of these:
+        34076 (33.64%) aligned 0 times
+        30311 (29.93%) aligned exactly 1 time
+        36899 (36.43%) aligned >1 times
+99.35% overall alignment rate
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ mv output.sam ~/assignments/assignment_1/bowtie2_output.sam
+
+```
+
+### f. Viewing the alignments
+Now, we will make use of **samtools** to review some basic features of the alignment. For mor information about this 
+tool: *http://www.htslib.org/doc/*
+
+```{bash, eval=FALSE}
+## Use *samtools view* to get the:
+## Tip: check out the different flag (-f and -F) options
+  -f INT   only include reads with all  of the FLAGs in INT present [0]
+  -F INT   only include reads with none of the FLAGS in INT present [0]
+  
+## Tip: Read the samtools view --help, read carefully for an option that allows you to *count* the results of your search
+
+(bmeg591e) elamoureux_bmeg22@orca01:~$ samtools view --help
+view: unrecognized option '--help'
+
+Usage: samtools view [options] <in.bam>|<in.sam>|<in.cram> [region ...]
+
+Options:
+  -b       output BAM
+  -C       output CRAM (requires -T)
+  -1       use fast BAM compression (implies -b)
+  -u       uncompressed BAM output (implies -b)
+  -h       include header in SAM output
+  -H       print SAM header only (no alignments)
+  -c       print only the count of matching records
+  -o FILE  output file name [stdout]
+  -U FILE  output reads not selected by filters to FILE [null]
+  -t FILE  FILE listing reference names and lengths (see long help) [null]
+  -L FILE  only include reads overlapping this BED FILE [null]
+  -r STR   only include reads in read group STR [null]
+  -R FILE  only include reads with read group listed in FILE [null]
+  -q INT   only include reads with mapping quality >= INT [0]
+  -l STR   only include reads in library STR [null]
+  -m INT   only include reads with number of CIGAR operations consuming
+           query sequence >= INT [0]
+  -f INT   only include reads with all  of the FLAGs in INT present [0]
+  -F INT   only include reads with none of the FLAGS in INT present [0]
+...
+
+#?# Number of mapped reads - 1 pt
+  -c       print only the count of matching records
+Total number of reads: 
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ samtools view -c bowtie2_output.sam
+5229820
+
+Number of mapped reads:
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ samtools view -c -F 4 bowtie2_output.sam
+5195744
+
+Check: 5195744/5229820 = 99.35% (same outcome as bowtie2)
+
+#?# Number of unmapped reads - 1 pt
+(bmeg591e) elamoureux_bmeg22@orca01:~/assignments/assignment_1$ samtools view -c -f 4 bowtie2_output.sam
+34076
+
+Check: 34076/5229820 = 0.65% --> 100% - 0.65% = 99.35% (same outcome as bowtie2)
+
+```
+
+## 4. Cleaning and Uploading
+### a. Cleaning your folders
+Before signing up, we need to make sure that we won't leave behind any big files that can take up a lot of memory from 
+our server. To do this, make sure to:
+
+a. Delete any copies of the input assignment files you might have done on your personal folder
+Done
+b. Zip or delete all the files used for the assignment 
+Done
+
+### b. Uploading to Github
+1. Make sure to create a Github account of your own. 
+2. Once you have set it up, create a new private repository for the course. 
+3. Use the "upload file" option to upload your assignment Rmd to the website. 
+4. Upload the link of your github repository where the assignment file is located onto Canvas
+
+## Other Resources
+
+### a. Bowtie2 index
+Indexes take a lot of computational resources and time to run. The one we need for the human genome will take around 
+3 hours to be done. ***DO NOT RUN THE INDEX COMMAND***. Go on to the next step, using the previously run index: 
+*hg38_bowtie2_index* under the following path: */projects/bmeg/indexes/*
+
+### b. Other
+
+You can get up to 20 points, if you answer all the questions correctly. Make sure to consult the resources given 
+through the assignment, they are meant to make the assignment easier.
