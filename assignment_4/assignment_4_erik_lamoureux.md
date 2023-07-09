@@ -7,7 +7,6 @@ February 14, 2022
 -   [Important remarks](#important-remarks)
 -   [Server IP: orca1.bcgsc.ca](#server-ip-orca1.bcgsc.ca)
 -   [username: elamoureux\_bmeg22](#username-elamoureux_bmeg22)
--   [password: fA8rut2AsT](#password-fa8rut2ast)
 -   [Shared folder location:](#shared-folder-location)
 -   [elamoureux\_bmeg22@orca01:/projects/bmeg/](#elamoureux_bmeg22orca01projectsbmeg)
     -   [0. Getting ready](#getting-ready)
